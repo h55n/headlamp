@@ -393,6 +393,52 @@ describe('useGetAllRelations', () => {
     ).toBe(false);
   });
 
+  it('finds Secrets and ConfigMaps used by volumes, envFrom, init and ephemeral containers', () => {
+    vi.spyOn(CRD, 'useList').mockReturnValue({
+      items: [],
+    } as unknown as ReturnType<typeof CRD.useList>);
+    const { result } = renderUseGetAllRelations();
+    const secretRelation = relationFor(result.current, Pod, Secret);
+    const configMapRelation = relationFor(result.current, Pod, ConfigMap);
+    const secret = new Secret(
+      { metadata: { uid: 'secret', name: 'credentials', namespace: 'namespace-a' } } as any,
+      'cluster-a'
+    );
+    const configMap = new ConfigMap(
+      { metadata: { uid: 'config', name: 'settings', namespace: 'namespace-a' } } as any,
+      'cluster-a'
+    );
+    const meta = { uid: 'pod', namespace: 'namespace-a' };
+
+    const secretSpecs = [
+      { volumes: [{ name: 'v', secret: { secretName: 'credentials' } }] },
+      { containers: [{ envFrom: [{ secretRef: { name: 'credentials' } }] }] },
+      { initContainers: [{ env: [{ valueFrom: { secretKeyRef: { name: 'credentials' } } }] }] },
+      { ephemeralContainers: [{ envFrom: [{ secretRef: { name: 'credentials' } }] }] },
+    ];
+    for (const spec of secretSpecs) {
+      expect(secretRelation.predicate(node(pod(meta, spec)), node(secret))).toBe(true);
+    }
+    expect(
+      secretRelation.predicate(
+        node(pod(meta, { volumes: [{ name: 'v', secret: { secretName: 'other' } }] })),
+        node(secret)
+      )
+    ).toBe(false);
+
+    const configMapSpecs = [
+      { containers: [{ envFrom: [{ configMapRef: { name: 'settings' } }] }] },
+      { containers: [{ env: [{ valueFrom: { configMapKeyRef: { name: 'settings' } } }] }] },
+      { initContainers: [{ envFrom: [{ configMapRef: { name: 'settings' } }] }] },
+      {
+        volumes: [{ name: 'p', projected: { sources: [{ configMap: { name: 'settings' } }] } }],
+      },
+    ];
+    for (const spec of configMapSpecs) {
+      expect(configMapRelation.predicate(node(pod(meta, spec)), node(configMap))).toBe(true);
+    }
+  });
+
   it('matches and rejects Kubernetes owner references', () => {
     vi.spyOn(CRD, 'useList').mockReturnValue({ items: null } as ReturnType<typeof CRD.useList>);
     const { result } = renderUseGetAllRelations();
