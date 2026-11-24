@@ -1,6 +1,7 @@
 name: Backend Embed Test
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "backend/**"
