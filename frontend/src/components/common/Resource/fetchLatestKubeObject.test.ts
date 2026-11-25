@@ -55,6 +55,11 @@ describe('partial Secret list-only RBAC', () => {
     const latest = {
       cluster: '',
       kind: 'Secret',
+      jsonData: {
+        kind: 'Secret',
+        metadata: { name: 'token', namespace: 'team' },
+        data: { token: 'value' },
+      },
       getName: () => 'token',
       getNamespace: () => 'team',
     } as KubeObject;
@@ -89,9 +94,18 @@ describe('partial Secret list-only RBAC', () => {
       queryParams: { fieldSelector: 'metadata.name=token' },
     });
     expect(f.latest.cluster).toBe('cluster-a');
+    expect(f.latest.jsonData.apiVersion).toBe('v1');
     await new Promise<void>(resolve => queueMicrotask(resolve));
     expect(f.getCancel).toHaveBeenCalledOnce();
     expect(f.listCancel).toHaveBeenCalledOnce();
+  });
+
+  it('preserves an explicit API version from the scoped list', async () => {
+    const f = fixture();
+    f.latest.jsonData.apiVersion = 'existing-version';
+    await expect(fetchLatestKubeObject(f.item)).resolves.toBe(f.latest);
+    expect(f.latest.jsonData.apiVersion).toBe('existing-version');
+    expect(f.latest.jsonData.data).toEqual({ token: 'value' });
   });
 
   it.each([401, 404, 500])('does not fall back on status %s', async status => {

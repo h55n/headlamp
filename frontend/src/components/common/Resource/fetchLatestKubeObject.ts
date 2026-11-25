@@ -105,6 +105,8 @@ export function fetchLatestKubeObject<K extends KubeObject>(item: K): Promise<K>
             fail(new Error('Secret was not returned by the scoped list request'));
             return;
           }
+          // SecretList items may omit type metadata; YAML actions need it.
+          latest.jsonData.apiVersion ??= 'v1';
           latest.cluster = item.cluster;
           finish();
           resolve(latest as K);
