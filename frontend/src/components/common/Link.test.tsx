@@ -42,7 +42,12 @@ function renderSecretLink(dataCount?: number, cached = false, missingKind = fals
     {
       apiVersion: 'v1',
       kind: 'Secret',
-      metadata: { name: 'example', namespace: 'default', uid: 'example' },
+      metadata: {
+        name: 'example',
+        namespace: 'default',
+        uid: 'example',
+        creationTimestamp: '2026-01-01T00:00:00Z',
+      },
       type: 'Opaque',
       data: { token: 'dmFsdWU=' },
     },
@@ -59,7 +64,7 @@ function renderSecretLink(dataCount?: number, cached = false, missingKind = fals
           },
           'test'
         );
-  if (missingKind) delete row.jsonData.kind;
+  if (missingKind) Reflect.deleteProperty(row.jsonData, 'kind');
   vi.spyOn(row, 'getDetailsLink').mockReturnValue('/secret/example');
   const key = kubeObjectQueryKey({
     cluster: 'test',
@@ -107,7 +112,12 @@ describe('Secret detail cache when following a resource link', () => {
       {
         apiVersion: 'v1',
         kind: 'ConfigMap',
-        metadata: { name: 'example', namespace: 'default', uid: 'example' },
+        metadata: {
+          name: 'example',
+          namespace: 'default',
+          uid: 'example',
+          creationTimestamp: '2026-01-01T00:00:00Z',
+        },
         data: {},
       },
       'test'
